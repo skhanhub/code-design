@@ -1,45 +1,44 @@
 import TokenStore, { Limit } from "./tokenStore";
 
 export default class RateLimiter {
-    tokenStore: TokenStore
+    tokenStore: TokenStore;
     capacity: number;
     refillTime: number;
     refillAmount: number;
 
     constructor(tokenStore: TokenStore, capacity: number, refillTime: number, refillAmount: number) {
-        this.tokenStore = tokenStore
-        this.capacity = capacity
-        this.refillTime = refillTime
-        this.refillAmount = refillAmount
+        this.tokenStore = tokenStore;
+        this.capacity = capacity;
+        this.refillTime = refillTime;
+        this.refillAmount = refillAmount;
     }
 
-    private addToken(currentLimit: Limit): Limit {
-        const currentTime = Date.now()
+    private addToken(currentLimit: Limit, currentTime: number): Limit {
 
-        const refillUnit = Math.floor((currentTime - currentLimit.lastAccess) / (this.refillTime * 1000)) // convert to milliseconds
-        const newTokenAmount = Math.min(currentLimit.token + refillUnit * this.refillAmount, this.capacity)
+        const refillUnit = Math.floor((currentTime - currentLimit.lastAccess) / (this.refillTime * 1000)); // convert to milliseconds
+        const newTokenAmount = Math.min(currentLimit.token + refillUnit * this.refillAmount, this.capacity);
 
-        return { token: newTokenAmount, lastAccess: currentTime }
+        return { token: newTokenAmount, lastAccess: currentTime };
     }
 
     handleRequest(userId: string): boolean {
-        const currentTime = Date.now()
+        const currentTime = Date.now();
 
-        let userLimit = this.tokenStore.getLimit(userId) ?? { token: this.capacity, lastAccess: currentTime }
+        let userLimit = this.tokenStore.getLimit(userId) ?? { token: this.capacity, lastAccess: currentTime };
 
 
         if (currentTime - userLimit.lastAccess >= this.refillTime * 1000) {
 
-            userLimit = this.addToken(userLimit)
+            userLimit = this.addToken(userLimit, currentTime);
         }
 
-        if (userLimit.token <= 0) return false
+        if (userLimit.token <= 0) return false;
 
-        userLimit.token--
+        userLimit.token--;
 
-        this.tokenStore.setLimit(userId, userLimit)
+        this.tokenStore.setLimit(userId, userLimit);
 
-        return true
+        return true;
 
     }
 }
